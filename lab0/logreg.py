@@ -2,12 +2,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import data
 
-# stabilni softmax
-def stable_softmax(x):
-    exp_x_shifted = np.exp(x - np.max(x))
-    probs = exp_x_shifted / np.sum(exp_x_shifted)
-    return probs
-
 def logreg_train(X, Y_):
 
     C = max(Y_) + 1
