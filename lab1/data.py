@@ -98,12 +98,11 @@ def graph_data(X, Y_, Y, special=[]):
 
     # draw the correctly classified datapoints
     good = (Y_ == Y)
-    plt.scatter(X[good, 0], X[good, 1], c=colors[good],
-                s=sizes[good], marker='o')
+    plt.scatter(X[good, 0], X[good, 1], c=colors[good], s=sizes[good], marker='o', edgecolors='black')
 
     # draw the incorrectly classified datapoints
     bad = (Y_ != Y)
-    plt.scatter(X[bad, 0], X[bad, 1], c=colors[bad], s=sizes[bad], marker='s')
+    plt.scatter(X[bad, 0], X[bad, 1], c=colors[bad], s=sizes[bad], marker='s', edgecolors='black')
 
 
 def class_to_onehot(Y):
@@ -211,7 +210,7 @@ if __name__ == "__main__":
     np.random.seed(100)
 
     # get data
-    X, Y_ = sample_gmm_2d(4, 2, 30)
+    X, Y_ = sample_gmm_2d(6, 2, 10)
     # X,Y_ = sample_gauss_2d(2, 100)
 
     # get the class predictions
