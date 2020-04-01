@@ -122,6 +122,22 @@ def eval_perf_binary(Y, Y_):
     return accuracy, recall, precision
 
 
+def eval_perf_multi2(Y, Y_):
+    C = len(np.unique(Y))
+    N = len(Y)
+
+    confusion_matrix = np.zeros((C, C))
+    for y, y_ in zip(Y, Y_):
+        confusion_matrix[y_, y] += 1
+
+    diagonal = np.diag(confusion_matrix)
+
+    accuracy = np.trace(confusion_matrix) / N
+    precision = diagonal / np.sum(confusion_matrix, axis=0)
+    recall = diagonal / np.sum(confusion_matrix, axis=1)
+    return accuracy, precision, recall
+
+
 def eval_perf_multi(Y, Y_):
     pr = []
     n = max(Y_)+1
