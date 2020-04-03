@@ -27,15 +27,15 @@ class PTLogreg(nn.Module):
         scores = torch.mm(X, torch.t(self.W)) + torch.t(self.b)
         self.probs = F.softmax(scores)
 
-    def get_loss(self, X, Yoh_, param_lambda):
+    def get_loss(self, X, Yoh_):
         # formulacija gubitka
         #   koristiti: torch.log, torch.mean, torch.sum
         logprobs = torch.log(self.probs)
-        loss = - torch.mean(torch.sum(logprobs * Yoh_, axis=1)) + param_lambda/(2*len(X)) * torch.sum(torch.norm(self.W, p=2, dim=1))
+        loss = - torch.mean(torch.sum(logprobs * Yoh_, axis=1))
         return loss
 
 
-def train(model, X, Yoh_, param_niter, param_delta, param_lambda=1e-3):
+def train(model, X, Yoh_, param_niter, param_delta):
     """Arguments:
        - X: model inputs [NxD], type: torch.Tensor
        - Yoh_: ground truth [NxC], type: torch.Tensor
@@ -52,7 +52,7 @@ def train(model, X, Yoh_, param_niter, param_delta, param_lambda=1e-3):
         model.forward(X)
 
         # Dohvati gubitak
-        loss = model.get_loss(X, Yoh_, param_lambda)
+        loss = model.get_loss(X, Yoh_)
 
         # računanje gradijenata
         loss.backward()

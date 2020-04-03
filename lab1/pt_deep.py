@@ -54,15 +54,12 @@ class PTDeep(nn.Module):
 
         self.probs = F.softmax(S)
 
-    def get_loss(self, X, Yoh_, param_lambda):
+    def get_loss(self, X, Yoh_):
         # formulacija gubitka
         #   koristiti: torch.log, torch.mean, torch.sum
-        sum_norms = 0
-        for W in self.weights:
-            sum_norms += torch.sum(torch.norm(W, p=2, dim=1))
 
         logprobs = torch.log(self.probs)
-        loss = - torch.mean(torch.sum(logprobs * Yoh_, axis=1)) + param_lambda/(2*len(X)) * sum_norms
+        loss = - torch.mean(torch.sum(logprobs * Yoh_, axis=1))
         return loss
 
 
@@ -74,7 +71,7 @@ class PTDeep(nn.Module):
         print('total parameters:', total_params)
 
 
-def train(model, X, Yoh_, param_niter, param_delta, param_lambda=1e-3):
+def train(model, X, Yoh_, param_niter, param_delta):
     """Arguments:
     - X: model inputs [NxD], type: torch.Tensor
     - Yoh_: ground truth [NxC], type: torch.Tensor
@@ -83,7 +80,7 @@ def train(model, X, Yoh_, param_niter, param_delta, param_lambda=1e-3):
     """
     
     # inicijalizacija optimizatora
-    optimizer = SGD(model.parameters(), lr=param_delta, weight_decay=1e-4)
+    optimizer = SGD(model.parameters(), lr=param_delta, weight_decay=1e-3)
 
     # petlja učenja
     for i in range(param_niter):
@@ -91,7 +88,7 @@ def train(model, X, Yoh_, param_niter, param_delta, param_lambda=1e-3):
         model.forward(X)
 
         # Dohvati gubitak
-        loss = model.get_loss(X, Yoh_, param_lambda)
+        loss = model.get_loss(X, Yoh_)
 
         # računanje gradijenata
         loss.backward()
