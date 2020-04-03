@@ -28,11 +28,15 @@ class PTDeep(nn.Module):
             self.biases.append(nn.Parameter(torch.rand(1, layer)))
 
 
-    def forward(self, X):
+    def forward(self, X, test=False):
         # unaprijedni prolaz modela: izračunati vjerojatnosti
         #   koristiti: torch.mm, torch.softmax
 
         S = torch.mm(X, self.weights[0]) + self.biases[0]
+
+        # Batch normalization
+        if ~test:
+            S = (S - S.mean(dim=1).view(-1,1)) / torch.sqrt(S.std(dim=1).view(-1,1))
 
         for i, (W, b) in enumerate(zip(self.weights, self.biases)):
             if i == 0:
@@ -40,6 +44,13 @@ class PTDeep(nn.Module):
 
             H = self.activation(S)
             S = torch.mm(H, W) + b
+
+            # Batch normalization
+            if ~test:
+                mean = S.mean(dim=1)
+                std = S.std(dim=1)
+                S = (S - S.mean(dim=1).view(-1,1)) / torch.sqrt(S.std(dim=1).view(-1,1))
+
 
         self.probs = F.softmax(S)
 
@@ -100,7 +111,7 @@ def eval(model, X):
     # ulaz je potrebno pretvoriti u torch.Tensor
     # izlaze je potrebno pretvoriti u numpy.array
     # koristite torch.Tensor.detach() i torch.Tensor.numpy()
-    model.forward(torch.from_numpy(X))
+    model.forward(torch.from_numpy(X), test=True)
     return model.probs.detach().numpy()
 
 
