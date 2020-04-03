@@ -15,7 +15,7 @@ def generate_weights(rows, columns=1):
 
 def fcann2_train(X, Y_):
 
-    param_niter = 100_000
+    param_niter = 10_000
     param_delta = 0.05
     param_lambda = 1e-3
 
@@ -47,8 +47,8 @@ def fcann2_train(X, Y_):
         logprobs = np.log(probs)  # N x C
 
         # gubitak
-        loss  = - np.sum(logprobs[np.arange(N), Y_]) / N     # scalar
-        # loss  = - (np.sum(logprobs[np.arange(N), Y_]) + 1/2 * param_lambda * np.linalg.norm(W2)) / N
+        loss  = - np.mean(logprobs[np.arange(N), Y_])     # scalar
+        # loss  = - np.mean(logprobs[np.arange(N), Y_]) + 1/2 * param_lambda * np.mean(np.linalg.norm(W2))
 
         # dijagnostički ispis
         if i % 10 == 0:
