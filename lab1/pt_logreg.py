@@ -31,7 +31,7 @@ class PTLogreg(nn.Module):
         # formulacija gubitka
         #   koristiti: torch.log, torch.mean, torch.sum
         logprobs = torch.log(self.probs)
-        loss = - torch.mean(torch.sum(logprobs * Yoh_, axis=1)) + param_lambda/(2*len(logprobs)) * torch.sum(torch.norm(self.W, p=2, dim=1))
+        loss = - torch.mean(torch.sum(logprobs * Yoh_, axis=1)) + param_lambda/(2*len(X)) * torch.sum(torch.norm(self.W, p=2, dim=1))
         return loss
 
 
