@@ -24,14 +24,15 @@ class PTLogreg(nn.Module):
     def forward(self, X):
         # unaprijedni prolaz modela: izračunati vjerojatnosti
         #   koristiti: torch.mm, torch.softmax
-        scores = torch.mm(X, torch.t(self.W)) + torch.t(self.b)
-        self.probs = F.softmax(scores)
+        self.scores = torch.mm(X, torch.t(self.W)) + torch.t(self.b)
+        self.probs = F.softmax(self.scores)
 
     def get_loss(self, X, Yoh_):
         # formulacija gubitka
         #   koristiti: torch.log, torch.mean, torch.sum
-        logprobs = torch.log(self.probs)
-        loss = - torch.mean(torch.sum(logprobs * Yoh_, axis=1))
+        # logprobs = torch.log(self.probs)
+        # loss = torch.mean(torch.log(torch.sum(torch.exp(self.probs) - self.probs[np.arange(Yoh_.size(0)), Yoh_], axis=1)))
+        loss = torch.mean(torch.max(self.scores, axis=1)[0] - torch.sum(self.scores * Yoh_, axis=1))
         return loss
 
 
