@@ -47,8 +47,9 @@ def fcann2_train(X, Y_):
         logprobs = np.log(probs)  # N x C
 
         # gubitak
-        loss  = - np.mean(logprobs[np.arange(N), Y_])     # scalar
+        # loss  = - np.mean(logprobs[np.arange(N), Y_])     # scalar
         # loss  = - np.mean(logprobs[np.arange(N), Y_]) + 1/2 * param_lambda * np.mean(np.linalg.norm(W2))
+        loss = np.mean(np.max(scores, axis=1) - scores[np.arange(N), Y_])
 
         # dijagnostički ispis
         if i % 10 == 0:
@@ -104,7 +105,7 @@ def fcann2_decfun(W1, b1, W2, b2):
 
 
 if __name__=="__main__":
-    np.random.seed(0)
+    np.random.seed(100)
 
     # get data
     X, Y_ = data.sample_gmm_2d(6, 2, 10)
