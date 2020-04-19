@@ -1,10 +1,14 @@
 import os
 import pickle
 import numpy as np
+import matplotlib.pyplot as plt
 
 import torch
 from torch import nn, optim
 from collections import OrderedDict
+
+import skimage as ski
+import skimage.io
 
 class CifarConvolutionalModel(nn.Module):
   def __init__(self, num_channels):
@@ -24,36 +28,103 @@ class CifarConvolutionalModel(nn.Module):
       nn.Linear(256, 128),
       nn.ReLU(inplace=True),
       nn.Linear(128, 10),
+      nn.Softmax()
     )
 
   def forward(self, x):
     x = self.features(x)
     x = torch.flatten(x, 1)
     x = self.classifier(x)
+    x = F
     return x
 
-def shuffle_data(data_x, data_y):
-  indices = np.arange(data_x.shape[0])
-  np.random.shuffle(indices)
-  shuffled_data_x = np.ascontiguousarray(data_x[indices])
-  shuffled_data_y = np.ascontiguousarray(data_y[indices])
-  return shuffled_data_x, shuffled_data_y
 
-def unpickle(file):
-  fo = open(file, 'rb')
-  dict = pickle.load(fo, encoding='latin1')
-  fo.close()
-  return dict
+
+def evaluate(name, x, y, net, criterion):
+  print("\nRunning evaluation: ", name)
+
+  with torch.no_grad():
+    logits = net.forward(x)
+    loss = criterion(logits, y).data.numpy()
+    yp = logits.argmax(dim=1).detach().numpy()
+    yt = y.detach().numpy()
+
+    accuracy, pr, M = eval_perf_multi(yp, yt)
+    print('loss: %.2f, accuracy: %.2f\n' % (loss, 100*accuracy))
+    return loss, accuracy
+
+def eval_perf_multi(yp, yt):
+  pr = []
+  n = max(yt)+1
+  M = np.bincount(n * yt + yp, minlength=n*n).reshape(n, n)
+  for i in range(n):
+      tp_i = M[i, i]
+      fn_i = np.sum(M[i, :]) - tp_i
+      fp_i = np.sum(M[:, i]) - tp_i
+      tn_i = np.sum(M) - fp_i - fn_i - tp_i
+      recall_i = tp_i / (tp_i + fn_i)
+      precision_i = tp_i / (tp_i + fp_i)
+      pr.append((recall_i, precision_i))
+  accuracy = np.trace(M)/np.sum(M)
+  return accuracy, pr, M
+
+def plot_training_progress(save_dir, data):
+  fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(2, 2, figsize=(16,8))
+
+  linewidth = 2
+  legend_size = 10
+  train_color = 'm'
+  val_color = 'c'
+
+  num_points = len(data['train_loss'])
+  x_data = np.linspace(1, num_points, num_points)
+  ax1.set_title('Cross-entropy loss')
+  ax1.plot(x_data, data['train_loss'], marker='o', color=train_color,
+           linewidth=linewidth, linestyle='-', label='train')
+  ax1.plot(x_data, data['valid_loss'], marker='o', color=val_color,
+           linewidth=linewidth, linestyle='-', label='validation')
+  ax1.legend(loc='upper right', fontsize=legend_size)
+  ax2.set_title('Average class accuracy')
+  ax2.plot(x_data, data['train_acc'], marker='o', color=train_color,
+           linewidth=linewidth, linestyle='-', label='train')
+  ax2.plot(x_data, data['valid_acc'], marker='o', color=val_color,
+           linewidth=linewidth, linestyle='-', label='validation')
+  ax2.legend(loc='upper left', fontsize=legend_size)
+  ax3.set_title('Learning rate')
+  ax3.plot(x_data, data['lr'], marker='o', color=train_color,
+           linewidth=linewidth, linestyle='-', label='learning_rate')
+  ax3.legend(loc='upper left', fontsize=legend_size)
+
+  save_path = os.path.join(save_dir, 'training_plot.png')
+  print('Plotting in: ', save_path)
+  plt.savefig(save_path)
+
+
+def draw_image(img, mean, std):
+  img = img.transpose(1,2,0)
+  img *= std
+  img += mean
+  img = img.astype(np.uint8)
+  ski.io.imshow(img)
+  ski.io.show()
+
 
 def train(model, train_x, train_y, valid_x, valid_y):
-  max_epochs = 5
+  max_epochs = 3
   batch_size = 50
   num_examples = train_x.shape[0]
   num_batches = num_examples // batch_size
 
+  plot_data = {}
+  plot_data['train_loss'] = []
+  plot_data['valid_loss'] = []
+  plot_data['train_acc'] = []
+  plot_data['valid_acc'] = []
+  plot_data['lr'] = []
+
   criterion = nn.CrossEntropyLoss()
-  optimizer = optim.SGD(model.parameters(), lr=1e-3, weight_decay=1e-3)
-  scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
+  optimizer = optim.SGD(model.parameters(), lr=1e-4, weight_decay=1e-3)
+  lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1)
 
   for epoch in range(1, max_epochs+1):
 
@@ -71,46 +142,41 @@ def train(model, train_x, train_y, valid_x, valid_y):
       loss.backward()
       optimizer.step()
       optimizer.zero_grad()
-      scheduler.step()
 
-      if i % 5 == 0:
+      if i % 100 == 0:
         print("epoch %d, step %d/%d, batch loss = %.2f" % (epoch, i*batch_size, num_examples, loss))
 
-    evaluate('Training', train_x, train_y, model, criterion)
-    evaluate('Validation', valid_x, valid_y, model, criterion)
+      # if i % 200 == 0:
+        # draw_conv_filters(epoch, batch, model.conv1.weight.detach().cpu().numpy(), SAVE_DIR)
 
-def evaluate(name, x, y, net, criterion):
-  print("\nRunning evaluation: ", name)
-  # batch_size = config['batch_size']
-  # num_examples = x.shape[0]
-  # assert num_examples % batch_size == 0
-  # num_batches = num_examples // batch_siz
+    train_loss, train_acc = evaluate('Training', train_x, train_y, model, criterion)
+    val_loss, val_acc = evaluate('Validation', valid_x, valid_y, model, criterion)
 
-  with torch.no_grad():
-    logits = net.forward(x)
-    loss = criterion(logits, y)
-    yp = logits.argmax(dim=1).detach().numpy()
-    yt = y.detach().numpy()
+    plot_data['train_loss'] += [train_loss]
+    plot_data['valid_loss'] += [val_loss]
+    plot_data['train_acc'] += [train_acc]
+    plot_data['valid_acc'] += [val_acc]
+    plot_data['lr'] += [lr_scheduler.get_lr()]
+    lr_scheduler.step()
 
-    accuracy, pr, M = eval_perf_multi(yp, yt)
-    print('loss: ', loss.data.numpy())
-    print('accuracy: ', accuracy)
+  plot_training_progress(SAVE_DIR, plot_data)
 
-def eval_perf_multi(yp, yt):
-  pr = []
-  n = max(yt)+1
-  M = np.bincount(n * yt + yp, minlength=n*n).reshape(n, n)
-  for i in range(n):
-      tp_i = M[i, i]
-      fn_i = np.sum(M[i, :]) - tp_i
-      fp_i = np.sum(M[:, i]) - tp_i
-      tn_i = np.sum(M) - fp_i - fn_i - tp_i
-      recall_i = tp_i / (tp_i + fn_i)
-      precision_i = tp_i / (tp_i + fp_i)
-      pr.append((recall_i, precision_i))
-  accuracy = np.trace(M)/np.sum(M)
-  return accuracy, pr, M
 
+def shuffle_data(data_x, data_y):
+  indices = np.arange(data_x.shape[0])
+  np.random.shuffle(indices)
+  shuffled_data_x = np.ascontiguousarray(data_x[indices])
+  shuffled_data_y = np.ascontiguousarray(data_y[indices])
+  return shuffled_data_x, shuffled_data_y
+
+def unpickle(file):
+  fo = open(file, 'rb')
+  dict = pickle.load(fo, encoding='latin1')
+  fo.close()
+  return dict
+
+
+SAVE_DIR = 'lab2/out'
 DATA_DIR = 'lab2/datasets/cifar-10-batches-py/'
 
 img_height = 32
