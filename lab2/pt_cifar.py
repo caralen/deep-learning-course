@@ -41,15 +41,27 @@ class CifarConvolutionalModel(nn.Module):
 
 def evaluate(name, x, y, net, criterion):
   print("\nRunning evaluation: ", name)
+  
+  batch_size = 50
+  num_examples = x.shape[0]
+  num_batches = num_examples // batch_size
+  val_loss = 0
+  yp = []
+  yt = []
 
   with torch.no_grad():
-    logits = net.forward(x)
-    loss = criterion(logits, y).data.numpy()
-    yp = logits.argmax(dim=1).detach().numpy()
-    yt = y.detach().numpy()
+    for i in range(num_batches):
+      batch_x = x[i*batch_size:(i+1)*batch_size, :]
+      batch_y = y[i*batch_size:(i+1)*batch_size]
 
-    accuracy, pr, M = eval_perf_multi(yp, yt)
-    print('loss: %.2f, accuracy: %.2f\n' % (loss, 100*accuracy))
+      logits = net.forward(batch_x)
+      val_loss += criterion(logits, batch_y).data.numpy()
+
+      yp.append(logits.argmax(dim=1).detach().numpy())
+      yt.append(batch_y.detach().numpy())
+
+    accuracy, pr, M = eval_perf_multi(np.reshape(yp, -1), np.reshape(yt, -1))
+    print('loss: %.2f, accuracy: %.2f\n' % (loss/num_batches, 100*accuracy))
     return loss, accuracy
 
 def eval_perf_multi(yp, yt):
@@ -57,13 +69,13 @@ def eval_perf_multi(yp, yt):
   n = max(yt)+1
   M = np.bincount(n * yt + yp, minlength=n*n).reshape(n, n)
   for i in range(n):
-      tp_i = M[i, i]
-      fn_i = np.sum(M[i, :]) - tp_i
-      fp_i = np.sum(M[:, i]) - tp_i
-      tn_i = np.sum(M) - fp_i - fn_i - tp_i
-      recall_i = tp_i / (tp_i + fn_i)
-      precision_i = tp_i / (tp_i + fp_i)
-      pr.append((recall_i, precision_i))
+    tp_i = M[i, i]
+    fn_i = np.sum(M[i, :]) - tp_i
+    fp_i = np.sum(M[:, i]) - tp_i
+    tn_i = np.sum(M) - fp_i - fn_i - tp_i
+    recall_i = tp_i / (tp_i + fn_i)
+    precision_i = tp_i / (tp_i + fp_i)
+    pr.append((recall_i, precision_i))
   accuracy = np.trace(M)/np.sum(M)
   return accuracy, pr, M
 
