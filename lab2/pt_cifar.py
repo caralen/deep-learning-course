@@ -76,28 +76,25 @@ def train(model, train_x, train_y, valid_x, valid_y):
       if i % 5 == 0:
         print("epoch %d, step %d/%d, batch loss = %.2f" % (epoch, i*batch_size, num_examples, loss))
 
-      if i % 10 == 0:
-        print(eval_perf_multi(np.argmax(logits.detach().numpy(), axis=1), batch_y.detach().numpy()))
+    evaluate('Training', train_x, train_y, model, criterion)
+    evaluate('Validation', valid_x, valid_y, model, criterion)
 
-def evaluate(x, y, net, criterion):
+def evaluate(name, x, y, net, criterion):
   print("\nRunning evaluation: ", name)
-  batch_size = config['batch_size']
-  num_examples = x.shape[0]
-  assert num_examples % batch_size == 0
-  num_batches = num_examples // batch_siz
+  # batch_size = config['batch_size']
+  # num_examples = x.shape[0]
+  # assert num_examples % batch_size == 0
+  # num_batches = num_examples // batch_siz
 
   with torch.no_grad():
-    for i in range(num_batches):
-      batch_x = x[i*batch_size:(i+1)*batch_size, :]
-      batch_y = y[i*batch_size:(i+1)*batch_size]
-      logits = net.forward(batch_x)
-      loss_val = criterion(logits, batch_y)
-      loss_avg += loss_val
-      yp = logits.argmax(dim=1).detach().numpy()
-      yt = batch_y.detach().numpy()
+    logits = net.forward(x)
+    loss = criterion(logits, y)
+    yp = logits.argmax(dim=1).detach().numpy()
+    yt = y.detach().numpy()
 
-      # To bas nema smisla da radim tak za svaki batch posebno
-      eval_perf_multi(yp, yt)
+    accuracy, pr, M = eval_perf_multi(yp, yt)
+    print('loss: ', loss.data.numpy())
+    print('accuracy: ', accuracy)
 
 def eval_perf_multi(yp, yt):
   pr = []
