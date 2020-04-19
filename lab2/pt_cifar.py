@@ -28,14 +28,13 @@ class CifarConvolutionalModel(nn.Module):
       nn.Linear(256, 128),
       nn.ReLU(inplace=True),
       nn.Linear(128, 10),
-      nn.Softmax()
+      # nn.Softmax()
     )
 
   def forward(self, x):
     x = self.features(x)
     x = torch.flatten(x, 1)
     x = self.classifier(x)
-    x = F
     return x
 
 
@@ -123,7 +122,7 @@ def train(model, train_x, train_y, valid_x, valid_y):
   plot_data['lr'] = []
 
   criterion = nn.CrossEntropyLoss()
-  optimizer = optim.SGD(model.parameters(), lr=1e-4, weight_decay=1e-3)
+  optimizer = optim.SGD(model.parameters(), lr=1e-1, weight_decay=1e-3)
   lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1)
 
   for epoch in range(1, max_epochs+1):
