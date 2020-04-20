@@ -1,4 +1,5 @@
 import os
+import math
 import pickle
 import numpy as np
 import matplotlib.pyplot as plt
@@ -28,7 +29,6 @@ class CifarConvolutionalModel(nn.Module):
       nn.Linear(256, 128),
       nn.ReLU(inplace=True),
       nn.Linear(128, 10),
-      # nn.Softmax()
     )
 
   def forward(self, x):
@@ -45,7 +45,7 @@ def evaluate(name, x, y, net, criterion):
   batch_size = 50
   num_examples = x.shape[0]
   num_batches = num_examples // batch_size
-  val_loss = 0
+  cum_loss = 0
   yp = []
   yt = []
 
@@ -55,13 +55,14 @@ def evaluate(name, x, y, net, criterion):
       batch_y = y[i*batch_size:(i+1)*batch_size]
 
       logits = net.forward(batch_x)
-      val_loss += criterion(logits, batch_y).data.numpy()
+      cum_loss += criterion(logits, batch_y).data.numpy()
 
       yp.append(logits.argmax(dim=1).detach().numpy())
       yt.append(batch_y.detach().numpy())
 
+    loss = cum_loss/num_batches
     accuracy, pr, M = eval_perf_multi(np.reshape(yp, -1), np.reshape(yt, -1))
-    print('loss: %.2f, accuracy: %.2f\n' % (loss/num_batches, 100*accuracy))
+    print('loss: %.2f, accuracy: %.2f\n' % (loss, 100*accuracy))
     return loss, accuracy
 
 def eval_perf_multi(yp, yt):
@@ -111,6 +112,29 @@ def plot_training_progress(save_dir, data):
   plt.savefig(save_path)
 
 
+def draw_conv_filters(epoch, step, weights, save_dir):
+  w = weights.copy()
+  num_filters = w.shape[0]
+  num_channels = w.shape[1]
+  k = w.shape[2]
+  assert w.shape[3] == w.shape[2]
+  w = w.transpose(2,3,1,0)
+  w -= w.min()
+  w /= w.max()
+  border = 1
+  cols = 8
+  rows = math.ceil(num_filters / cols)
+  width = cols * k + (cols-1) * border
+  height = rows * k + (rows-1) * border
+  img = np.zeros([height, width, num_channels])
+  for i in range(num_filters):
+    r = int(i / cols) * (k + border)
+    c = int(i % cols) * (k + border)
+    img[r:r+k,c:c+k,:] = w[:,:,:,i]
+  filename = 'epoch_%02d_step_%06d.png' % (epoch, step)
+  ski.io.imsave(os.path.join(save_dir, filename), img)
+
+
 def draw_image(img, mean, std):
   img = img.transpose(1,2,0)
   img *= std
@@ -120,8 +144,23 @@ def draw_image(img, mean, std):
   ski.io.show()
 
 
+def show_k_highest_loss_images(model, x, y, data_mean, data_std, k=20):
+  x_numpy = x.detach().numpy()
+  criterion = nn.CrossEntropyLoss(reduction='none')
+
+  with torch.no_grad():
+    logits = model.forward(x)
+    losses = criterion(logits, y)
+    indices = torch.topk(losses, k)[1].detach().numpy()
+
+    for i in indices:
+      draw_image(x_numpy[i], data_mean, data_std)
+      print('True class:', y[i].data)
+      print('3 highest prob classes: ', torch.topk(logits[i, :], 3)[1].data)
+
+
 def train(model, train_x, train_y, valid_x, valid_y):
-  max_epochs = 3
+  max_epochs = 1
   batch_size = 50
   num_examples = train_x.shape[0]
   num_batches = num_examples // batch_size
@@ -157,8 +196,8 @@ def train(model, train_x, train_y, valid_x, valid_y):
       if i % 100 == 0:
         print("epoch %d, step %d/%d, batch loss = %.2f" % (epoch, i*batch_size, num_examples, loss))
 
-      # if i % 200 == 0:
-        # draw_conv_filters(epoch, batch, model.conv1.weight.detach().cpu().numpy(), SAVE_DIR)
+      if i % 200 == 0:
+        draw_conv_filters(epoch, i, model.features[0].weight.detach().cpu().numpy(), SAVE_DIR)
 
     train_loss, train_acc = evaluate('Training', train_x, train_y, model, criterion)
     val_loss, val_acc = evaluate('Validation', valid_x, valid_y, model, criterion)
@@ -187,7 +226,7 @@ def unpickle(file):
   return dict
 
 
-SAVE_DIR = 'lab2/out'
+SAVE_DIR = 'lab2/out/'
 DATA_DIR = 'lab2/datasets/cifar-10-batches-py/'
 
 img_height = 32
@@ -233,4 +272,8 @@ valid_y = torch.from_numpy(valid_y)
 test_y = torch.from_numpy(test_y)
 
 net = CifarConvolutionalModel(train_x.shape[1])
+draw_conv_filters(0, 0, net.features[0].weight.detach().numpy(), SAVE_DIR)
 train(net, train_x, train_y, valid_x, valid_y)
+
+test_loss, test_acc = evaluate('Test', test_x, test_y, net, nn.CrossEntropyLoss())
+show_k_highest_loss_images(net, test_x, test_y, data_mean, data_std)
