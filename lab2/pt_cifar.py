@@ -243,7 +243,7 @@ def unpickle(file):
   return dict
 
 
-SAVE_DIR = 'lab2/out/'
+SAVE_DIR = 'lab2/out/cifar/'
 DATA_DIR = 'lab2/datasets/cifar-10-batches-py/'
 
 img_height = 32

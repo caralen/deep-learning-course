@@ -17,7 +17,7 @@ from torchvision.transforms import ToTensor, Normalize, Compose
 from torchvision.datasets import MNIST
 
 DATA_DIR = Path(__file__).parent / 'datasets' / 'MNIST'
-SAVE_DIR = Path(__file__).parent / 'out'
+SAVE_DIR = Path(__file__).parent / 'out' / 'mnist'
 
 config = {}
 config['max_epochs'] = 3
