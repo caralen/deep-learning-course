@@ -159,6 +159,22 @@ def show_k_highest_loss_images(model, x, y, data_mean, data_std, k=20):
       print('3 highest prob classes: ', torch.topk(logits[i, :], 3)[1].data)
 
 
+def multiclass_hinge_loss(logits: torch.Tensor, target: torch.Tensor, delta=1.):  
+  """
+  Args:
+    logits: torch.Tensor with shape (B, C), where B is batch size, and C is number of classes.
+    target: torch.LongTensor with shape (B, ) representing ground truth labels.
+    delta: Hyperparameter.
+  Returns:
+    Loss as scalar torch.Tensor.
+  """
+  target_onehot = torch.zeros(logits.shape, dtype=torch.bool)
+  target_onehot.scatter_(1, target.reshape(-1,1), True)
+  scores_hit = torch.masked_select(logits, target_onehot).reshape(-1,1)
+  scores_miss = torch.masked_select(logits, ~target_onehot).reshape(-1, logits.shape[1]-1)
+  return torch.sum(torch.max(torch.zeros(scores_miss.shape), scores_miss - scores_hit + delta), dim=1).mean()
+
+
 def train(model, train_x, train_y, valid_x, valid_y):
   max_epochs = 1
   batch_size = 50
@@ -172,6 +188,7 @@ def train(model, train_x, train_y, valid_x, valid_y):
   plot_data['valid_acc'] = []
   plot_data['lr'] = []
 
+  # criterion = multiclass_hinge_loss
   criterion = nn.CrossEntropyLoss()
   optimizer = optim.SGD(model.parameters(), lr=1e-1, weight_decay=1e-3)
   lr_scheduler = optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1)
