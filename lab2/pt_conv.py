@@ -163,10 +163,7 @@ def evaluate(name, validloader, net, criterion):
 
 
 if __name__ == "__main__":
-  #np.random.seed(100)
-  np.random.seed(int(time.time() * 1e6) % 2**31)
   train_len = 55000
-
   transform = Compose([ToTensor(), Normalize([0.5], [0.5]),])
   traindata = MNIST(DATA_DIR, download=True, train=True, transform=transform)
   train_set, val_set = torch.utils.data.random_split(traindata, [train_len, len(traindata.data)-train_len])
@@ -175,7 +172,7 @@ if __name__ == "__main__":
   validloader = torch.utils.data.DataLoader(val_set, batch_size=config['batch_size'], shuffle=True)
   testloader = torch.utils.data.DataLoader(test_set, batch_size=config['batch_size'], shuffle=False)
 
-  net = CovolutionalModel(1, 16, 32, 512, 10)
+  net = CovolutionalModel(in_channels = 1, conv1_width = 16, conv2_width = 32, fc1_width = 512, class_count = 10)
   train(net, trainloader, validloader)
   evaluate('Test', testloader, net, nn.CrossEntropyLoss())
 
