@@ -11,24 +11,42 @@ from collections import OrderedDict
 import skimage as ski
 import skimage.io
 
+
+SAVE_DIR = 'lab2/out/cifar/'
+DATA_DIR = 'lab2/datasets/cifar-10-batches-py/'
+MAX_EPOCHS = 3
+BATCH_SIZE = 50
+
+
+def conv_output_dim(img_w, kernel_size, stride):
+  return (img_w - kernel_size)//stride + 1
+
 class CifarConvolutionalModel(nn.Module):
-  def __init__(self, num_channels):
+  def __init__(self, img_w, in_channels, conv1_width, conv2_width, fc1_width, fc2_width, class_count):
     super().__init__()
 
+    pool_kernel_size = 3
+    pool_stride = 2
+    pool_layers = 2
+
     self.features = nn.Sequential(
-      nn.Conv2d(num_channels, 16, kernel_size=5, stride=1, padding=2, bias=True),
-      nn.MaxPool2d(3, 2),
+      nn.Conv2d(in_channels, conv1_width, kernel_size=5, stride=1, padding=2, bias=True),
+      nn.MaxPool2d(pool_kernel_size, pool_stride),
       nn.ReLU(inplace=True),
-      nn.Conv2d(16, 32, kernel_size=5, stride=1, padding=2, bias=True),
-      nn.MaxPool2d(3, 2),
+      nn.Conv2d(conv1_width, conv2_width, kernel_size=5, stride=1, padding=2, bias=True),
+      nn.MaxPool2d(pool_kernel_size, pool_stride),
       nn.ReLU(inplace=True),
     )
+
+    for i in range(pool_layers):
+      img_w = conv_output_dim(img_w=img_w, kernel_size=pool_kernel_size, stride=pool_stride)
+
     self.classifier = nn.Sequential(
-      nn.Linear(1568, 256),
+      nn.Linear(conv2_width * img_w**2, fc1_width),
       nn.ReLU(inplace=True),
-      nn.Linear(256, 128),
+      nn.Linear(fc1_width, fc2_width),
       nn.ReLU(inplace=True),
-      nn.Linear(128, 10),
+      nn.Linear(fc2_width, class_count),
     )
 
   def forward(self, x):
@@ -176,8 +194,8 @@ def multiclass_hinge_loss(logits: torch.Tensor, target: torch.Tensor, delta=1.):
 
 
 def train(model, train_x, train_y, valid_x, valid_y):
-  max_epochs = 1
-  batch_size = 50
+  max_epochs = MAX_EPOCHS
+  batch_size = BATCH_SIZE
   num_examples = train_x.shape[0]
   num_batches = num_examples // batch_size
 
@@ -243,9 +261,6 @@ def unpickle(file):
   return dict
 
 
-SAVE_DIR = 'lab2/out/cifar/'
-DATA_DIR = 'lab2/datasets/cifar-10-batches-py/'
-
 img_height = 32
 img_width = 32
 num_channels = 3
@@ -277,18 +292,16 @@ train_x = (train_x - data_mean) / data_std
 valid_x = (valid_x - data_mean) / data_std
 test_x = (test_x - data_mean) / data_std
 
-train_x = train_x.transpose(0,3,1,2)
-valid_x = valid_x.transpose(0,3,1,2)
-test_x = test_x.transpose(0,3,1,2)
-
-train_x = torch.from_numpy(train_x)
-valid_x = torch.from_numpy(valid_x)
-test_x = torch.from_numpy(test_x)
+train_x = torch.from_numpy(train_x.transpose(0,3,1,2))
+valid_x = torch.from_numpy(valid_x.transpose(0,3,1,2))
+test_x = torch.from_numpy(test_x.transpose(0,3,1,2))
 train_y = torch.from_numpy(train_y)
 valid_y = torch.from_numpy(valid_y)
 test_y = torch.from_numpy(test_y)
 
-net = CifarConvolutionalModel(train_x.shape[1])
+net = CifarConvolutionalModel(img_w=img_width, in_channels=num_channels, conv1_width=16, 
+  conv2_width=32, fc1_width=256, fc2_width=128, class_count=num_classes)
+
 draw_conv_filters(0, 0, net.features[0].weight.detach().numpy(), SAVE_DIR)
 train(net, train_x, train_y, valid_x, valid_y)
 
