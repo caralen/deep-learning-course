@@ -122,7 +122,7 @@ if __name__ == "__main__":
     Y = np.argmax(probs, axis=1)
 
     # ispiši performansu (preciznost i odziv po razredima)
-    accuracy, precision, recall = data.eval_perf_multi(Y, Y_)
+    accuracy, precision, recall = eval_perf_multi(Y, Y_)
     print(f'accuracy: {accuracy}, precision: {precision}, recall: {recall}')
 
     # iscrtaj rezultate, decizijsku plohu

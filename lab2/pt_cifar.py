@@ -14,7 +14,7 @@ import skimage.io
 
 SAVE_DIR = 'lab2/out/cifar/'
 DATA_DIR = 'lab2/datasets/cifar-10-batches-py/'
-MAX_EPOCHS = 3
+MAX_EPOCHS = 1
 BATCH_SIZE = 50
 
 

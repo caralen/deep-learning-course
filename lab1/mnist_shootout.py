@@ -223,7 +223,7 @@ if __name__ == "__main__":
     # inicijaliziraj generatore slučajnih brojeva
     np.random.seed(100)
 
-    config = [784, 100, 100, 10]
+    config = [784, 100, 10]
 
     dataset_root = '/tmp/mnist'  # change this to your preference
     mnist_train = torchvision.datasets.MNIST(dataset_root, train=True, download=True)

@@ -20,7 +20,7 @@ DATA_DIR = Path(__file__).parent / 'datasets' / 'MNIST'
 SAVE_DIR = Path(__file__).parent / 'out' / 'mnist'
 
 config = {}
-config['max_epochs'] = 3
+config['max_epochs'] = 5
 config['batch_size'] = 50
 config['save_dir'] = SAVE_DIR
 config['weight_decay'] = 1e-3

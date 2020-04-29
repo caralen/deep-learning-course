@@ -16,7 +16,7 @@ def generate_weights(rows, columns=1):
 def fcann2_train(X, Y_):
 
     param_niter = 10_000
-    param_delta = 0.05
+    param_delta = 0.01
     param_lambda = 1e-3
 
     C = max(Y_) + 1
