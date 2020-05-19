@@ -6,6 +6,8 @@
 # gitignore template for Jupyter Notebooks
 # website: http://jupyter.org/
 
+sst_glove_6b_300d.txt
+
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
 
