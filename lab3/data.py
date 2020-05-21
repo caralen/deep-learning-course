@@ -43,29 +43,29 @@ class Vocab:
     def decode(self, seq):
         return torch.tensor([self.itos[el] for el in seq])
 
-def generate_embedding_matrix(word_seq, vocab, rand=False):
+def generate_embedding_matrix(vocab, rand=False):
     D = 300
-    N = len(word_seq)
+    N = len(vocab.stoi)
     matrix = np.random.normal(0, 1, (N, D))
 
     if rand:
         return torch.nn.Embedding.from_pretrained(matrix, padding_idx=0, freeze=False)
 
     glove = {}
-    with open(path, 'r') as f:
+    with open(GLOVE_PATH, 'r') as f:
         for line in f:
             arr = line.split()
             key = arr[0]
             value = arr[1:-1]
             glove[key] = value
 
-    for idx, word in enumerate(word_seq):
-        if idx == 0:
-            matrix[idx] = np.zeros(D)
+    for (k, v) in vocab.itos.items():
+        if k == 0:
+            matrix[k] = np.zeros(self.D)
 
-        if word in glove.keys():
-            matrix[idx] = np.array(glove[word])
-    
+        if v in glove.keys():
+            matrix[k] = np.array(glove[v])
+
     return torch.nn.Embedding.from_pretrained(matrix, padding_idx=0, freeze=True)
 
 
@@ -113,10 +113,12 @@ class NLPDataset(Dataset):
 
 
 def pad_tensor(tensor, max_len, pad_index=0):
-    tensor_size = len(tensor.numpy())
+    seq = tensor.numpy().tolist()
+    tensor_size = len(seq)
     if tensor_size == max_len:
-        return tensor
-    return torch.cat((tensor, torch.tensor([pad_index]*(max_len-tensor_size))))
+        return seq
+    return seq + [pad_index]*(max_len-tensor_size)
+    # return torch.cat((tensor, torch.tensor([pad_index]*(max_len-tensor_size))))
 
 
 def pad_collate_fn(batch, pad_index=0):
@@ -132,8 +134,19 @@ def pad_collate_fn(batch, pad_index=0):
     lengths = torch.tensor([len(text) for text in texts]) # Needed for later
     # Process the text instances
     max_len = lengths.max().item()
-    texts = [pad_tensor(text, max_len, pad_index) for text in texts]
+    texts = torch.tensor([pad_tensor(text, max_len, pad_index) for text in texts])
+    labels = torch.tensor([label.numpy().tolist() for label in labels]).flatten()
     return texts, labels, lengths
+
+
+def load_dataset(batch_size):
+    train_dataset = NLPDataset.from_file(TRAIN_PATH)
+    valid_dataset = NLPDataset.from_file(VALID_PATH, train_dataset.text_vocab, train_dataset.label_vocab)
+    test_dataset = NLPDataset.from_file(TEST_PATH, train_dataset.text_vocab, train_dataset.label_vocab)
+    train_data_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn)
+    valid_data_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)
+    test_data_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)
+    return train_data_loader, valid_data_loader, test_data_loader
 
 
 def main2():
