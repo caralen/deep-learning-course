@@ -37,8 +37,8 @@ class Vocab:
 
     def encode(self, seq):
         if type(seq) is str:
-            return torch.tensor([self.stoi[seq]])
-        return torch.tensor([self.stoi[el] for el in seq])
+            return torch.tensor([self.stoi[seq]] if seq in self.stoi.keys() else [self.stoi['<UNK>']])
+        return torch.tensor([self.stoi[el] if el in self.stoi.keys() else self.stoi['<UNK>'] for el in seq])
 
     def decode(self, seq):
         return torch.tensor([self.itos[el] for el in seq])
