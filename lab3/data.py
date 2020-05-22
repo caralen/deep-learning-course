@@ -56,17 +56,17 @@ def generate_embedding_matrix(vocab, rand=False):
         for line in f:
             arr = line.split()
             key = arr[0]
-            value = arr[1:-1]
+            value = arr[1:]
             glove[key] = value
 
     for (k, v) in vocab.itos.items():
         if k == 0:
-            matrix[k] = np.zeros(self.D)
+            matrix[k] = np.zeros(D)
 
         if v in glove.keys():
             matrix[k] = np.array(glove[v])
 
-    return torch.nn.Embedding.from_pretrained(matrix, padding_idx=0, freeze=True)
+    return torch.nn.Embedding.from_pretrained(torch.tensor(matrix), padding_idx=0, freeze=True)
 
 
 @dataclass
@@ -156,7 +156,10 @@ def main2():
     train_data_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, 
                                 shuffle=shuffle, collate_fn=pad_collate_fn)
     texts, labels, lengths = next(iter(train_data_loader))
-    print(f"Texts: {texts}")
+    
+    embedding = generate_embedding_matrix(train_dataset.text_vocab)
+    x = embedding(texts)
+    print(f"Texts: {x}")
     print(f"Labels: {labels}")
     print(f"Lengths: {lengths}")
     # >>> Texts: tensor([[   2,  554,    7, 2872,    6,   22,    2, 2873, 1236,    8,   96, 4800,

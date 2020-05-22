@@ -16,7 +16,7 @@ class Baseline(nn.Module):
         # kernel size je duljina recenice, tj te sekvence rijeci
         # sta nije da to ovisi o batchu?
         self.embedding = embedding
-        self.pool = nn.AvgPool1d(kernel_size=300)
+        # self.pool = nn.AvgPool1d(kernel_size=300)
         self.fc1 = nn.Linear(300, 150, bias=True)
         self.fc2 = nn.Linear(150, 150, bias=True)
         self.fc3 = nn.Linear(150, 1, bias=True)
