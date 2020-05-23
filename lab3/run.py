@@ -17,33 +17,30 @@ SAVE_DIR = Path(__file__).parent / 'output/'
 
 
 def train(model, data, optimizer, criterion, args):
-    model.train()   # omogucava droupout - wut?! Sets the module in training mode!!!
+    model.train()
     model.float()
     for batch_num, batch in enumerate(data):
-        model.zero_grad()   # isto ko i optim.zero_grad() u ovom slucaju
-        x, y, _ = batch    # ovo mozda nece ic ovak
-        logits = model.forward(x.cuda())
-        loss = criterion(logits, y.float().cuda())
+        model.zero_grad()
+        x, y, _ = batch
+        logits = model.forward(x)
+        loss = criterion(logits, y.float())
         loss.backward()
         utils.clip_grad_norm_(model.parameters(), args.clip)
         optimizer.step()
 
-        # if batch_num % 100 == 0:
-        #     print(f'batch: {batch_num}, loss: {loss}')
-
 
 def evaluate(model, data, criterion, name):
-    model.eval()    # Sets the model in eval mode
+    model.eval()
     with torch.no_grad():
         Y, Y_ = ([], [])
         for batch_num, batch in enumerate(data):
             x, y, _ = batch
-            logits = model.forward(x.cuda())
-            loss = criterion(logits, y.float().cuda())
+            logits = model.forward(x)
+            loss = criterion(logits, y.float())
             yp = torch.round(torch.sigmoid(logits)).int()
 
-            Y += yp.detach().cpu().numpy().tolist()
-            Y_ += y.detach().cpu().numpy().tolist()
+            Y += yp.detach().numpy().tolist()
+            Y_ += y.detach().numpy().tolist()
 
         accuracy, f1, confusion_matrix = eval_perf_binary(np.array(Y), np.array(Y_))
         accuracy, f1 = [round(x*100, 3) for x in (accuracy, f1)]
@@ -72,13 +69,13 @@ def main_hyperparam_optim(args):
 
     params = {
         'cell_name': ['lstm'],
-        'hidden_size': [50, 150, 300],
-        'num_layers': [1, 2, 4],
-        'min_freq': [0, 100, 500],
-        'lr': [1e-1, 1e-4, 1e-7],
-        'dropout': [0.1, 0.4, 0.7],
+        'hidden_size': [150],
+        'num_layers': [2],
+        'min_freq': [0],
+        'lr': [1e-4],
+        'dropout': [0],
         'freeze': [False, True],
-        'rand_emb': [False, True]
+        'rand_emb': [False]
     }
 
     for i in tqdm(range(10)):
@@ -88,7 +85,6 @@ def main_hyperparam_optim(args):
         embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab, rand=chosen_params['rand_emb'], freeze=chosen_params['freeze'])
 
         model = RNN(embedding, chosen_params)
-        model.cuda()
         criterion = nn.BCEWithLogitsLoss()
         optimizer = torch.optim.Adam(model.parameters(), lr=chosen_params['lr'])
 
@@ -135,7 +131,7 @@ def main_cell_comparison(args):
                 current_params['cell_name'] = cell_name
 
                 model = RNN(embedding, current_params)
-                model.cuda()
+                model
                 criterion = nn.BCEWithLogitsLoss()
                 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 

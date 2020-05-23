@@ -23,10 +23,22 @@ class RNN(nn.Module):
         else:
             raise AttributeError('Wrong cell name')
 
-        self.fc1 = nn.Linear(params['hidden_size'], 150)
-        self.fc2 = nn.Linear(150, 1)
+        self.atten1 = nn.Linear(params['hidden_size'], int(params['hidden_size']/2))
+        self.atten2 = nn.Linear(int(params['hidden_size']/2), 1)
+        self.fc1 = nn.Linear(params['hidden_size'], params['hidden_size'])
+        self.fc2 = nn.Linear(params['hidden_size'], 1)
 
-    def forward(self, x):
+
+    def attention_layer(self, h_n):
+        h = self.atten1(h_n)
+        h = torch.tanh(h)
+        a = self.atten2(h)
+        alpha = torch.softmax(a, dim=0)
+        out = torch.sum(alpha*h_n, dim=0)
+        return out
+
+
+    def forward(self, x, attention=True):
         h = torch.transpose(x, 1, 0)
         h = self.embedding(h)
 
@@ -35,8 +47,12 @@ class RNN(nn.Module):
         else:
             _, h_n = self.rnn(h)
 
-        h = h_n[-1]
-        h = self.fc1(h)
+        if attention:
+            h = self.attention_layer(h_n)
+        else:
+            h = h_n[-1]
+            h = self.fc1(h)
+
         h = torch.relu(h)
         h = self.fc2(h)
         return h.flatten()
