@@ -21,8 +21,8 @@ def train(model, data, optimizer, criterion, args):
     for batch_num, batch in enumerate(data):
         model.zero_grad()   # isto ko i optim.zero_grad() u ovom slucaju
         x, y, _ = batch    # ovo mozda nece ic ovak
-        logits = model.forward(x)
-        loss = criterion(logits, y.float())
+        logits = model.forward(x.cuda())
+        loss = criterion(logits, y.float().cuda())
         loss.backward()
         utils.clip_grad_norm_(model.parameters(), args.clip)
         optimizer.step()
@@ -37,12 +37,12 @@ def evaluate(model, data, criterion, name):
         Y, Y_ = ([], [])
         for batch_num, batch in enumerate(data):
             x, y, _ = batch
-            logits = model.forward(x)
-            loss = criterion(logits, y.float())
+            logits = model.forward(x.cuda())
+            loss = criterion(logits, y.float().cuda())
             yp = torch.round(torch.sigmoid(logits)).int()
 
-            Y += yp.detach().numpy().tolist()
-            Y_ += y.detach().numpy().tolist()
+            Y += yp.detach().cpu().numpy().tolist()
+            Y_ += y.detach().cpu().numpy().tolist()
 
         accuracy, f1, confusion_matrix = eval_perf_binary(np.array(Y), np.array(Y_))
         accuracy, f1 = [round(x*100, 3) for x in (accuracy, f1)]
@@ -70,6 +70,8 @@ def main_cell_comparison(args):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
+    cuda = torch.cuda.current_device()
+
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
 
@@ -82,6 +84,8 @@ def main_cell_comparison(args):
 
 
     for idx, (key, values) in enumerate(params.items()):
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        ax.set_title('Variable ' + key)
         for cell_name in tqdm(['rnn', 'lstm', 'gru']):
             results = []
             for i in range(len(values)):
@@ -89,6 +93,7 @@ def main_cell_comparison(args):
                 current_params['cell_name'] = cell_name
 
                 model = RNN(embedding, current_params)
+                model.cuda()
                 criterion = nn.BCEWithLogitsLoss()
                 optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
@@ -97,11 +102,15 @@ def main_cell_comparison(args):
                     train(model, train_dataset, optimizer, criterion, args)
                     evaluate(model, valid_dataset, criterion, 'Validation')
 
-                # ovo zapisat u file
                 result = evaluate(model, test_dataset, criterion, 'Test')
                 results.append(result)
-            plt.plot(values, results)
-        plt.savefig(os.path.join(SAVE_DIR, key + '.png'))
+
+            ax.plot(values, results, marker='o', label=cell_name)
+        plt.legend(loc='best')
+        plt.xlabel(key)
+        plt.ylabel('accuracy')
+        fig.savefig(os.path.join(SAVE_DIR, key + '.png'))
+        plt.close(fig)
 
 
 def main(args):
