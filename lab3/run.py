@@ -66,7 +66,7 @@ def main(args):
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
-    model = RNN(embedding)
+    model = RNN(embedding, 'lstm')
 
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
