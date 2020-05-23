@@ -139,13 +139,13 @@ def pad_collate_fn(batch, pad_index=0):
     return texts, labels, lengths
 
 
-def load_dataset(batch_size):
+def load_dataset(train_batch_size, test_batch_size):
     train_dataset = NLPDataset.from_file(TRAIN_PATH)
     valid_dataset = NLPDataset.from_file(VALID_PATH, train_dataset.text_vocab, train_dataset.label_vocab)
     test_dataset = NLPDataset.from_file(TEST_PATH, train_dataset.text_vocab, train_dataset.label_vocab)
-    train_data_loader = DataLoader(dataset=train_dataset, batch_size=batch_size, shuffle=True, collate_fn=pad_collate_fn)
-    valid_data_loader = DataLoader(dataset=valid_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)
-    test_data_loader = DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, collate_fn=pad_collate_fn)
+    train_data_loader = DataLoader(dataset=train_dataset, batch_size=train_batch_size, shuffle=True, collate_fn=pad_collate_fn)
+    valid_data_loader = DataLoader(dataset=valid_dataset, batch_size=test_batch_size, shuffle=False, collate_fn=pad_collate_fn)
+    test_data_loader = DataLoader(dataset=test_dataset, batch_size=test_batch_size, shuffle=False, collate_fn=pad_collate_fn)
     return train_data_loader, valid_data_loader, test_data_loader
 
 
