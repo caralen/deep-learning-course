@@ -1,6 +1,9 @@
 import numpy as np
+from matplotlib import pyplot as plt
 from pathlib import Path
 import argparse
+import os
+from tqdm import tqdm
 
 import torch
 import torch.nn as nn
@@ -9,7 +12,7 @@ import torch.nn.utils as utils
 import data
 from models import RNN, Baseline
 
-OUT_PATH = Path(__file__).parent / 'output/baseline.txt'
+SAVE_DIR = Path(__file__).parent / 'output/'
 
 
 def train(model, data, optimizer, criterion, args):
@@ -24,8 +27,8 @@ def train(model, data, optimizer, criterion, args):
         utils.clip_grad_norm_(model.parameters(), args.clip)
         optimizer.step()
 
-        if batch_num % 100 == 0:
-            print(f'batch: {batch_num}, loss: {loss}')
+        # if batch_num % 100 == 0:
+        #     print(f'batch: {batch_num}, loss: {loss}')
 
 
 def evaluate(model, data, criterion, name):
@@ -44,6 +47,7 @@ def evaluate(model, data, criterion, name):
         accuracy, f1, confusion_matrix = eval_perf_binary(np.array(Y), np.array(Y_))
         accuracy, f1 = [round(x*100, 3) for x in (accuracy, f1)]
         print(f'[{name}] accuracy: {accuracy}, f1: {f1}, confusion_matrix: {confusion_matrix}')
+        return accuracy
 
 
 def eval_perf_binary(Y, Y_):
@@ -59,6 +63,47 @@ def eval_perf_binary(Y, Y_):
     return accuracy, f1, confusion_matrix
 
 
+
+
+def main_cell_comparison(args):
+    seed = args.seed
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
+    embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
+
+    params = {
+        'hidden_size': [50, 150, 300],
+        'num_layers': [1, 2, 4],
+        'dropout': [0.1, 0.4, 0.7],
+        'bidirectional': [True, False]
+    }
+
+
+    for idx, (key, values) in enumerate(params.items()):
+        for cell_name in tqdm(['rnn', 'lstm', 'gru']):
+            results = []
+            for i in range(len(values)):
+                current_params = {k: v[i] if k==key else v[1] for (k,v) in params.items()}
+                current_params['cell_name'] = cell_name
+
+                model = RNN(embedding, current_params)
+                criterion = nn.BCEWithLogitsLoss()
+                optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+                for epoch in range(args.epochs):
+                    print(f'******* epoch: {epoch+1} *******')
+                    train(model, train_dataset, optimizer, criterion, args)
+                    evaluate(model, valid_dataset, criterion, 'Validation')
+
+                # ovo zapisat u file
+                result = evaluate(model, test_dataset, criterion, 'Test')
+                results.append(result)
+            plt.plot(values, results)
+        plt.savefig(os.path.join(SAVE_DIR, key + '.png'))
+
+
 def main(args):
     seed = args.seed
     np.random.seed(seed)
@@ -66,7 +111,7 @@ def main(args):
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
-    model = RNN(embedding, 'lstm')
+    model = RNN(embedding)
 
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -89,4 +134,4 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     print(args)
-    main(args)
+    main_cell_comparison(args)
