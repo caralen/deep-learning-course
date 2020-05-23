@@ -23,7 +23,10 @@ class Vocab:
     def __init__(self, frequencies, max_size, min_freq, labels=False):
 
         # filtrirat za frekvenciju
-        filtered_freq = {key: value for (key, value) in frequencies.items() if value >= min_freq}
+        if not labels:
+            filtered_freq = {key: value for (key, value) in frequencies.items() if value >= min_freq}
+        else:
+            filtered_freq = dict(frequencies)
         
         # sortirat
         max_size = max_size if max_size != -1 else len(filtered_freq)
@@ -43,13 +46,13 @@ class Vocab:
     def decode(self, seq):
         return torch.tensor([self.itos[el] for el in seq])
 
-def generate_embedding_matrix(vocab, rand=False):
+def generate_embedding_matrix(vocab, rand=False, freeze=True):
     D = 300
     N = len(vocab.stoi)
     matrix = np.random.normal(0, 1, (N, D))
 
     if rand:
-        return torch.nn.Embedding.from_pretrained(matrix, padding_idx=0, freeze=False)
+        return torch.nn.Embedding.from_pretrained(torch.tensor(matrix), padding_idx=0, freeze=False)
 
     glove = {}
     with open(GLOVE_PATH, 'r') as f:
@@ -66,7 +69,7 @@ def generate_embedding_matrix(vocab, rand=False):
         if v in glove.keys():
             matrix[k] = np.array(glove[v])
 
-    return torch.nn.Embedding.from_pretrained(torch.tensor(matrix), padding_idx=0, freeze=True)
+    return torch.nn.Embedding.from_pretrained(torch.tensor(matrix), padding_idx=0, freeze=freeze)
 
 
 @dataclass
@@ -90,7 +93,7 @@ class NLPDataset(Dataset):
         return len(self.instances)
 
     @staticmethod
-    def from_file(path, text_vocab=None, label_vocab=None):
+    def from_file(path, text_vocab=None, label_vocab=None, max_size=-1, min_freq=0):
         instances = []
         with open(path, 'r') as f:
             for line in f:
@@ -106,8 +109,8 @@ class NLPDataset(Dataset):
                 if instance.label == 'positive':
                     print()
 
-            text_vocab = Vocab(Counter(all_text), max_size=-1, min_freq=0)
-            label_vocab = Vocab(Counter(all_labels), max_size=-1, min_freq=0, labels=True)
+            text_vocab = Vocab(Counter(all_text), max_size=max_size, min_freq=min_freq)
+            label_vocab = Vocab(Counter(all_labels), max_size=max_size, min_freq=min_freq, labels=True)
         
         return NLPDataset(instances, text_vocab, label_vocab)
 
@@ -139,8 +142,8 @@ def pad_collate_fn(batch, pad_index=0):
     return texts, labels, lengths
 
 
-def load_dataset(train_batch_size, test_batch_size):
-    train_dataset = NLPDataset.from_file(TRAIN_PATH)
+def load_dataset(train_batch_size, test_batch_size, max_size=-1, min_freq=0):
+    train_dataset = NLPDataset.from_file(TRAIN_PATH, max_size=max_size, min_freq=min_freq)
     valid_dataset = NLPDataset.from_file(VALID_PATH, train_dataset.text_vocab, train_dataset.label_vocab)
     test_dataset = NLPDataset.from_file(TEST_PATH, train_dataset.text_vocab, train_dataset.label_vocab)
     train_data_loader = DataLoader(dataset=train_dataset, batch_size=train_batch_size, shuffle=True, collate_fn=pad_collate_fn)

@@ -7,12 +7,19 @@ class RNN(nn.Module):
         self.embedding = embedding
         self.params = params
 
+        cell_params = {
+            'input_size': 300,
+            'hidden_size': params['hidden_size'],
+            'num_layers': params['num_layers'],
+            'dropout': params['dropout']
+        }
+
         if params['cell_name'] == 'rnn':
-            self.rnn = nn.RNN(input_size=300, hidden_size=params['hidden_size'], num_layers=params['num_layers'])
+            self.rnn = nn.RNN(**cell_params)
         elif params['cell_name'] == 'gru':
-            self.rnn = nn.GRU(input_size=300, hidden_size=params['hidden_size'], num_layers=params['num_layers'])
+            self.rnn = nn.GRU(**cell_params)
         elif params['cell_name'] == 'lstm':
-            self.rnn = nn.LSTM(input_size=300, hidden_size=params['hidden_size'], num_layers=params['num_layers'])
+            self.rnn = nn.LSTM(**cell_params)
         else:
             raise AttributeError('Wrong cell name')
 
