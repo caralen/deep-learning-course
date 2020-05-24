@@ -74,10 +74,11 @@ def main_hyperparam_optim(args):
         'min_freq': [0],
         'lr': [1e-4],
         'dropout': [0],
-        'freeze': [False, True],
+        'freeze': [True],
         'rand_emb': [False]
     }
 
+    results = []
     for i in tqdm(range(10)):
         chosen_params = {k: random.choice(v) for (k, v) in params.items()}
 
@@ -97,8 +98,10 @@ def main_hyperparam_optim(args):
         result = dict(chosen_params)
         result['acc'] = acc
         result['f1'] = f1
+        results.append
 
-        with open(os.path.join(SAVE_DIR, 'params' + i + '.txt'), 'w') as f:
+    with open(os.path.join(SAVE_DIR, 'params_search.txt'), 'a') as f:
+        for result in results:
             print(result, file=f)
 
 
