@@ -62,10 +62,64 @@ def eval_perf_binary(Y, Y_):
 
 
 
+def main_attention_test(args):
+    chosen_params = {
+        'cell_name': 'lstm',
+        'hidden_size': 150,
+        'num_layers': 2,
+        'min_freq': 0,
+        'lr': 1e-4,
+        'dropout': 0,
+        'freeze': True,
+        'rand_emb': False,
+        'attention': True
+    }
+    results = []
+
+    for att in range(2):
+        chosen_params['attention'] = True if att == 0 else False
+        runs = 5
+        acc_d = {}
+        f1_d = {}
+
+        for i in tqdm(range(runs)):
+            train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size, min_freq=chosen_params['min_freq'])
+            embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab, rand=chosen_params['rand_emb'], freeze=chosen_params['freeze'])
+
+            model = RNN(embedding, chosen_params)
+            criterion = nn.BCEWithLogitsLoss()
+            optimizer = torch.optim.Adam(model.parameters(), lr=chosen_params['lr'])
+
+            for epoch in range(args.epochs):
+                print(f'******* epoch: {epoch+1} *******')
+                train(model, train_dataset, optimizer, criterion, args)
+                evaluate(model, valid_dataset, criterion, 'Validation')
+            
+            acc, f1 = evaluate(model, test_dataset, criterion, 'Test')
+            acc_d['acc_' + 'run' + str(i)] = acc
+            f1_d['f1_' + 'run' + str(i)] = f1
+
+        mean = np.mean(list(acc_d.values()))
+        std = np.std(list(acc_d.values()))
+        acc_d['mean'] = mean
+        acc_d['std'] = std
+
+        mean = np.mean(list(f1_d.values()))
+        std = np.std(list(f1_d.values()))
+        f1_d['mean'] = mean
+        f1_d['std'] = std
+
+        results.append((acc_d, f1_d))
+
+    with open(os.path.join(SAVE_DIR, 'attention.txt'), 'a') as f:
+        print(f'', file=f)
+        for idx, (acc, f1) in enumerate(results):
+            print('[attention]' if idx == 0 else '[no attention]', file=f)
+            print(acc, file=f)
+            print(f1, file=f)
+
+
 def main_hyperparam_optim(args):
-    seed = args.seed
-    np.random.seed(seed)
-    torch.manual_seed(seed)
 
     params = {
         'cell_name': ['lstm'],
@@ -75,7 +129,8 @@ def main_hyperparam_optim(args):
         'lr': [1e-3, 1e-4, 1e-7],
         'dropout': [0, 0.4, 0.7],
         'freeze': [False, True],
-        'rand_emb': [False, True]
+        'rand_emb': [False, True],
+        'attention': [False]
     }
 
     results = []
@@ -108,11 +163,6 @@ def main_hyperparam_optim(args):
 
 
 def main_cell_comparison(args):
-    seed = args.seed
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-
-    cuda = torch.cuda.current_device()
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
@@ -155,9 +205,6 @@ def main_cell_comparison(args):
 
 
 def main(args):
-    seed = args.seed
-    np.random.seed(seed)
-    torch.manual_seed(seed)
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
@@ -174,6 +221,14 @@ def main(args):
     evaluate(model, test_dataset, criterion, 'Test')
 
 
+def init(args):
+    seed = args.seed
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    main_attention_test(args)
+
+
 
 if __name__ == '__main__':
     
@@ -185,5 +240,4 @@ if __name__ == '__main__':
     parser.add_argument('clip', type=float, help='max norm of the gradients for gradient clipping')
 
     args = parser.parse_args()
-    print(args)
-    main_hyperparam_optim(args)
+    init(args)

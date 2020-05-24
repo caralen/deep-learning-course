@@ -38,7 +38,7 @@ class RNN(nn.Module):
         return out
 
 
-    def forward(self, x, attention=True):
+    def forward(self, x):
         h = torch.transpose(x, 1, 0)
         h = self.embedding(h)
 
@@ -47,7 +47,7 @@ class RNN(nn.Module):
         else:
             _, h_n = self.rnn(h)
 
-        if attention:
+        if self.params['attention']:
             h = self.attention_layer(h_n)
         else:
             h = h_n[-1]
