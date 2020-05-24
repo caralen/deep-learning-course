@@ -69,13 +69,13 @@ def main_hyperparam_optim(args):
 
     params = {
         'cell_name': ['lstm'],
-        'hidden_size': [150],
-        'num_layers': [2],
-        'min_freq': [0],
-        'lr': [1e-4],
-        'dropout': [0],
-        'freeze': [True],
-        'rand_emb': [False]
+        'hidden_size': [50, 150, 300],
+        'num_layers': [2, 4, 5],
+        'min_freq': [0, 100, 500],
+        'lr': [1e-3, 1e-4, 1e-7],
+        'dropout': [0, 0.4, 0.7],
+        'freeze': [False, True],
+        'rand_emb': [False, True]
     }
 
     results = []
