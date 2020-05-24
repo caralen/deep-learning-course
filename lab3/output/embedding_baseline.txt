@@ -1,0 +1,2 @@
+{'baseline_acc_rand_embTrue': 66.055, 'baseline_f1_rand_embTrue': 61.053, 'rnn_acc_rand_embTrue': 73.05, 'rnn_f1_rand_embTrue': 73.02}
+{'baseline_acc_rand_embFalse': 75.0, 'baseline_f1_rand_embFalse': 77.197, 'rnn_acc_rand_embFalse': 77.294, 'rnn_f1_rand_embFalse': 78.846}
