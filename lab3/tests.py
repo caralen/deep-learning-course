@@ -11,73 +11,67 @@ import torch.nn as nn
 import torch.nn.utils as utils
 
 import data
+from train import train, evaluate
 from models import RNN, Baseline
 
 SAVE_DIR = Path(__file__).parent / 'output/'
 
-
-def train(model, data, optimizer, criterion, args):
-    model.train()
-    model.float()
-    for batch_num, batch in enumerate(data):
-        model.zero_grad()
-        x, y, _ = batch
-        logits = model.forward(x)
-        loss = criterion(logits, y.float())
-        loss.backward()
-        utils.clip_grad_norm_(model.parameters(), args.clip)
-        optimizer.step()
-
-
-def evaluate(model, data, criterion, name):
-    model.eval()
-    with torch.no_grad():
-        Y, Y_ = ([], [])
-        for batch_num, batch in enumerate(data):
-            x, y, _ = batch
-            logits = model.forward(x)
-            loss = criterion(logits, y.float())
-            yp = torch.round(torch.sigmoid(logits)).int()
-
-            Y += yp.detach().numpy().tolist()
-            Y_ += y.detach().numpy().tolist()
-
-        accuracy, f1, confusion_matrix = eval_perf_binary(np.array(Y), np.array(Y_))
-        accuracy, f1 = [round(x*100, 3) for x in (accuracy, f1)]
-        print(f'[{name}] accuracy: {accuracy}, f1: {f1}, confusion_matrix: {confusion_matrix}')
-        return accuracy, f1
-
-
-def eval_perf_binary(Y, Y_):
-    tp = sum(np.logical_and(Y == Y_, Y_ == True))
-    fn = sum(np.logical_and(Y != Y_, Y_ == True))
-    tn = sum(np.logical_and(Y == Y_, Y_ == False))
-    fp = sum(np.logical_and(Y != Y_, Y_ == False))
-    recall = tp / (tp + fn)
-    precision = tp / (tp + fp)
-    accuracy = (tp + tn) / (tp+fn + tn+fp)
-    f1 = 2 * (recall*precision) / (recall + precision)
-    confusion_matrix = [[tp, fp], [fn, tn]]
-    return accuracy, f1, confusion_matrix
+params = {
+    'cell_name': 'lstm',
+    'hidden_size': 150,
+    'num_layers': 2,
+    'min_freq': 0,
+    'lr': 1e-4,
+    'dropout': 0,
+    'freeze': True,
+    'rand_emb': False,
+    'attention': False
+}
 
 
 
-def main_attention_test(args):
-    chosen_params = {
-        'cell_name': 'lstm',
-        'hidden_size': 150,
-        'num_layers': 2,
-        'min_freq': 0,
-        'lr': 1e-4,
-        'dropout': 0,
-        'freeze': True,
-        'rand_emb': False,
-        'attention': True
-    }
+def embedding_baseline_test(args):
+    chosen_params = dict(params)
+
     results = []
 
-    for att in range(2):
-        chosen_params['attention'] = True if att == 0 else False
+    for rand_emb in [True, False]:
+        chosen_params['rand_emb'] = rand_emb
+        train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size, min_freq=chosen_params['min_freq'])
+        embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab, rand=chosen_params['rand_emb'], freeze=chosen_params['freeze'])
+
+        result = {}
+        for m in ['baseline', 'rnn']:
+            if m == 'rnn':
+                model = RNN(embedding, chosen_params)
+            else:
+                model = Baseline(embedding)
+
+            criterion = nn.BCEWithLogitsLoss()
+            optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+
+            for epoch in range(args.epochs):
+                print(f'******* epoch: {epoch} *******')
+                train(model, train_dataset, optimizer, criterion, args)
+                evaluate(model, valid_dataset, criterion, 'Validation')
+
+            acc, f1 = evaluate(model, test_dataset, criterion, 'Test')
+            result[m + '_acc_rand_emb' + str(rand_emb)] = acc
+            result[m + '_f1_rand_emb' + str(rand_emb)] = f1
+        results.append(result)
+
+    with open(os.path.join(SAVE_DIR, 'embedding_baseline.txt'), 'a') as f:
+        for res in results:
+            print(res, file=f)
+
+
+
+def attention_test(args):
+    chosen_params = dict(params)
+    results = []
+
+    for attention in [False, True]:
+        chosen_params['attention'] = attention
         runs = 5
         acc_d = {}
         f1_d = {}
@@ -114,14 +108,14 @@ def main_attention_test(args):
     with open(os.path.join(SAVE_DIR, 'attention.txt'), 'a') as f:
         print(f'', file=f)
         for idx, (acc, f1) in enumerate(results):
-            print('[attention]' if idx == 0 else '[no attention]', file=f)
+            print('[no attention]' if idx == 0 else '[attention]', file=f)
             print(acc, file=f)
             print(f1, file=f)
 
 
-def main_hyperparam_optim(args):
+def hyperparam_optim_test(args):
 
-    params = {
+    var_params = {
         'cell_name': ['lstm'],
         'hidden_size': [50, 150, 300],
         'num_layers': [2, 4, 5],
@@ -135,7 +129,7 @@ def main_hyperparam_optim(args):
 
     results = []
     for i in tqdm(range(10)):
-        chosen_params = {k: random.choice(v) for (k, v) in params.items()}
+        chosen_params = {k: random.choice(v) for (k, v) in var_params.items()}
 
         train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size, min_freq=chosen_params['min_freq'])
         embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab, rand=chosen_params['rand_emb'], freeze=chosen_params['freeze'])
@@ -162,25 +156,26 @@ def main_hyperparam_optim(args):
 
 
 
-def main_cell_comparison(args):
+def cell_comparison_test(args):
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
 
-    params = {
+    var_params = {
         'hidden_size': [50, 150, 300],
         'num_layers': [1, 2, 4],
         'dropout': [0.1, 0.4, 0.7],
-        'bidirectional': [True, False]
+        'bidirectional': [True, False],
+        'attention': [False]
     }
 
-    for idx, (key, values) in enumerate(params.items()):
+    for idx, (key, values) in enumerate(var_params.items()):
         fig, ax = plt.subplots(nrows=1, ncols=1)
         ax.set_title('Variable ' + key)
         for cell_name in tqdm(['rnn', 'lstm', 'gru']):
             results = []
             for i in range(len(values)):
-                current_params = {k: v[i] if k==key else v[1] for (k,v) in params.items()}
+                current_params = {k: v[i] if k==key else v[1] for (k,v) in var_params.items()}
                 current_params['cell_name'] = cell_name
 
                 model = RNN(embedding, current_params)
@@ -205,10 +200,11 @@ def main_cell_comparison(args):
 
 
 def main(args):
+    chosen_params = dict(params)
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
-    model = RNN(embedding)
+    model = RNN(embedding, params)
 
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -226,7 +222,7 @@ def init(args):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    main_attention_test(args)
+    attention_test(args)
 
 
 
