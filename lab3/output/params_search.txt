@@ -18,3 +18,13 @@
 {'cell_name': 'lstm', 'hidden_size': 50, 'num_layers': 4, 'min_freq': 0, 'lr': 0.001, 'dropout': 0.4, 'freeze': False, 'rand_emb': False, 'acc': 76.95, 'f1': 73.93}
 {'cell_name': 'lstm', 'hidden_size': 50, 'num_layers': 2, 'min_freq': 100, 'lr': 0.001, 'dropout': 0.4, 'freeze': False, 'rand_emb': True, 'acc': 66.972, 'f1': 64.444}
 {'cell_name': 'lstm', 'hidden_size': 300, 'num_layers': 5, 'min_freq': 500, 'lr': 1e-07, 'dropout': 0.4, 'freeze': False, 'rand_emb': True, 'acc': 50.917, 'f1': nan}
+{'cell_name': 'lstm', 'hidden_size': 150, 'num_layers': 2, 'min_freq': 100, 'lr': 0.0001, 'dropout': 0.7, 'freeze': True, 'rand_emb': False, 'clip': 1, 'attention': False, 'acc': 50.917, 'f1': nan}
+{'cell_name': 'lstm', 'hidden_size': 50, 'num_layers': 3, 'min_freq': 100, 'lr': 0.0001, 'dropout': 0.4, 'freeze': False, 'rand_emb': False, 'clip': 1, 'attention': False, 'acc': 64.335, 'f1': 63.108}
+{'cell_name': 'lstm', 'hidden_size': 150, 'num_layers': 3, 'min_freq': 500, 'lr': 0.001, 'dropout': 0, 'freeze': False, 'rand_emb': False, 'clip': 0.25, 'attention': False, 'acc': 50.917, 'f1': nan}
+{'cell_name': 'lstm', 'hidden_size': 50, 'num_layers': 4, 'min_freq': 100, 'lr': 0.001, 'dropout': 0.7, 'freeze': True, 'rand_emb': True, 'clip': 0.25, 'attention': False, 'acc': 62.5, 'f1': 59.877}
+{'cell_name': 'lstm', 'hidden_size': 150, 'num_layers': 2, 'min_freq': 100, 'lr': 1e-07, 'dropout': 0.4, 'freeze': False, 'rand_emb': False, 'clip': 1, 'attention': False, 'acc': 49.083, 'f1': 65.846}
+{'cell_name': 'lstm', 'hidden_size': 50, 'num_layers': 2, 'min_freq': 100, 'lr': 0.001, 'dropout': 0.4, 'freeze': False, 'rand_emb': False, 'clip': 1, 'attention': False, 'acc': 67.202, 'f1': 67.937}
+{'cell_name': 'lstm', 'hidden_size': 300, 'num_layers': 3, 'min_freq': 100, 'lr': 1e-07, 'dropout': 0, 'freeze': False, 'rand_emb': False, 'clip': 1, 'attention': False, 'acc': 50.917, 'f1': nan}
+{'cell_name': 'lstm', 'hidden_size': 150, 'num_layers': 2, 'min_freq': 0, 'lr': 0.001, 'dropout': 0.4, 'freeze': False, 'rand_emb': True, 'clip': 5, 'attention': False, 'acc': 77.523, 'f1': 77.367}
+{'cell_name': 'lstm', 'hidden_size': 300, 'num_layers': 3, 'min_freq': 500, 'lr': 0.0001, 'dropout': 0, 'freeze': False, 'rand_emb': True, 'clip': 5, 'attention': False, 'acc': 56.766, 'f1': 43.478}
+{'cell_name': 'lstm', 'hidden_size': 150, 'num_layers': 3, 'min_freq': 500, 'lr': 1e-07, 'dropout': 0.7, 'freeze': True, 'rand_emb': True, 'clip': 0.25, 'attention': False, 'acc': 50.917, 'f1': nan}
