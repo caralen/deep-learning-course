@@ -147,7 +147,7 @@ def hyperparam_optim_test(args):
         result = dict(chosen_params)
         result['acc'] = acc
         result['f1'] = f1
-        results.append
+        results.append(result)
 
     with open(os.path.join(SAVE_DIR, 'params_search.txt'), 'a') as f:
         for result in results:
