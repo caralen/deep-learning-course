@@ -9,6 +9,7 @@ class RNN(nn.Module):
 
         cell_params = {
             'input_size': 300,
+            'batch_first': True,
             'hidden_size': params['hidden_size'],
             'num_layers': params['num_layers'],
             'dropout': params['dropout']
@@ -29,30 +30,29 @@ class RNN(nn.Module):
         self.fc2 = nn.Linear(params['hidden_size'], 1)
 
 
-    def attention_layer(self, h_n):
-        h = self.atten1(h_n)
-        h = torch.tanh(h)
-        a = self.atten2(h)
-        alpha = torch.softmax(a, dim=0)
-        out = torch.sum(alpha*h_n, dim=0)
+    def attention_layer(self, h):
+        a = self.atten2(torch.tanh(self.atten1(h)))
+        alpha = torch.softmax(a, dim=1)
+        out = torch.sum(alpha*h, dim=1)
         return out
 
 
     def forward(self, x):
-        h = torch.transpose(x, 1, 0)
-        h = self.embedding(h)
+        # h = torch.transpose(x, 1, 0)
+        h = self.embedding(x)
 
-        if self.params['cell_name'] == 'lstm':
+        if self.params['cell_name'] == 'lstm' and not self.params['attention']:
             _, (h_n, _) = self.rnn(h)
         else:
             _, h_n = self.rnn(h)
 
         if self.params['attention']:
-            h = self.attention_layer(h_n)
+            output, _ = self.rnn(h)
+            h = self.attention_layer(output)
         else:
             h = h_n[-1]
-            h = self.fc1(h)
-
+            
+        h = self.fc1(h)
         h = torch.relu(h)
         h = self.fc2(h)
         return h.flatten()

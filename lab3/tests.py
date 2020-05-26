@@ -201,10 +201,11 @@ def cell_comparison_test(args):
 
 def main(args):
     chosen_params = dict(params)
+    chosen_params['attention'] = True
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
     embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
-    model = RNN(embedding, params)
+    model = RNN(embedding, chosen_params)
 
     criterion = nn.BCEWithLogitsLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -222,7 +223,7 @@ def init(args):
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    attention_test(args)
+    main(args)
 
 
 
