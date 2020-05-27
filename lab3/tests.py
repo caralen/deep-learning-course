@@ -204,7 +204,7 @@ def main(args):
     chosen_params['attention'] = True
 
     train_dataset, valid_dataset, test_dataset = data.load_dataset(args.train_batch_size, args.test_batch_size)
-    embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab)
+    embedding = data.generate_embedding_matrix(train_dataset.dataset.text_vocab, freeze=False)
     model = RNN(embedding, chosen_params)
 
     criterion = nn.BCEWithLogitsLoss()
