@@ -20,37 +20,62 @@ import matplotlib.pyplot as plt
 
 class VAE(nn.Module):
     
-    def __init__(self, latent_size):
+    def __init__(self, latent_size, input_size, output_size, hidden_size):
         super(VAE, self).__init__()
         
         self.latent_size = latent_size
+        self.output_size = output_size
         
-        ???
+        self.enc1 = nn.Linear(input_size, hidden_size)
+        self.enc2 = nn.Linear(hidden_size, hidden_size)
+        self.dec1 = nn.Linear(latent_size, hidden_size)
+        self.dec2 = nn.Linear(hidden_size, 2*output_size)
+        # self.dec3 = nn.Linear(2*output_size, output_size)
+        
+        self.softplus = nn.Softplus()
+
+        self.mu = nn.Linear(hidden_size, latent_size)
+        self.var = nn.Linear(hidden_size, latent_size)
         
     def encode(self, x):
-        # TODO!
-        return ???, ???
+        x = self.enc1(x)
+        x = self.softplus(x)
+        x = self.enc2(x)
+        x = self.softplus(x)
+        mu = self.mu(x)
+        logvar = torch.log(self.softplus(self.var(x)))
+        return mu, logvar
         
     def reparametrize(self, mu, logvar):
-        # TODO!
-        return ???
+        return mu + torch.exp(logvar) * torch.randn_like(mu)
     
     def decode(self, z):
-        # TODO!
-        return ???
+        z = self.dec1(z)
+        z = self.softplus(z)
+        z = self.dec2(z)
+        z = self.softplus(z)
+        
+        mu_x = z[:, np.array([i for i in range(z.shape[1]) if i%2==0])]
+        var_x = z[:, np.array([i for i in range(z.shape[1]) if i%2!=0])]
+
+        out = torch.zeros(size=(z.shape[0], self.output_size))
+
+        for idx, (mu, var) in enumerate(zip(mu_x, var_x)):
+            out[idx] = self.reparametrize(mu, var)
+
+        return torch.sigmoid(out)
     
     def forward(self, x):
         mu, logvar = self.encode(x.view(-1, 784))
         z = self.reparametrize(mu, logvar)
         reconstruction = self.decode(z)
-        
         return reconstruction, z, mu, logvar
     
     @staticmethod
     def loss_fn(reconstruction, batch, mu, logvar):
-        crossentropy = 
-        kl_div = 
-        return ???
+        crossentropy = F.binary_cross_entropy(reconstruction, batch.view(-1, 784), reduction='mean')
+        kl_div = 0.5 * torch.sum(1 + logvar - mu**2 - torch.exp(logvar)) / batch.shape[0]
+        return crossentropy - kl_div
 
 
 def prepare_data_loaders(batch_size=32):
@@ -202,8 +227,9 @@ def walk_in_latent_space(latent_space_abs_limit=3, sqrt_sample_count=20, latent_
 
 
 LATENT_SIZE = 2
-model = VAE(LATENT_SIZE)
-model = train(model, batch_size=1024, device='cuda', n_epochs=100, log_epochs=10, learning_rate=3.24e-4)
+input_size = output_size = 784
+model = VAE(LATENT_SIZE, input_size, output_size, hidden_size=200)
+model = train(model, batch_size=1024, device='cpu', n_epochs=100, log_epochs=10, learning_rate=3.24e-4)
 
 plot_reconstructions('cuda', state_shape=(2, 1))
 

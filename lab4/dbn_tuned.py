@@ -21,22 +21,22 @@ class DBNWithFineTuning():
     def forward(self, batch, steps=None):
         batch = batch.view(-1, 784)
         
-        h1_up_prob = 
-        h1_up = 
+        h1_up_prob = sigmoid(torch.matmul(batch, self.R1) + self.h1_up_bias)
+        h1_up = torch.bernoulli(h1_up_prob)
         
-        v1_up_down_prob = 
-        v1_up_down = 
+        v1_up_down_prob = sigmoid(torch.matmul(h1_up, self.W1_down) + self.v1_bias)
+        v1_up_down = torch.bernoulli(v1_up_down_prob)
         
-        h2_up_prob = 
-        h2_up = 
+        h2_up_prob = sigmoid(torch.matmul(v1_up_down, self.W2) + self.h2_bias)
+        h2_up = torch.bernoulli(h2_up_prob)
         
-        h1_down_prob, h1_down, h2_down_prob, h2_down = self.gibbs_sampling(???, steps=steps)
+        h1_down_prob, h1_down, h2_down_prob, h2_down = self.gibbs_sampling(h2_up, steps=steps)
         
-        v1_down_prob = 
-        v1_down = 
+        v1_down_prob = sigmoid(torch.matmul(h1_down, self.W1_down) + self.v1_bias)
+        v1_down = torch.bernoulli(v1_down_prob)
         
-        h1_down_up_prob = 
-        h1_down_up = 
+        h1_down_up_prob = sigmoid(torch.matmul(v1_down, self.R) + self.h1_up_bias)
+        h1_down_up = torch.bernoulli(h1_down_up_prob)
         
         return h1_up_prob, h1_up, v1_up_down_prob, v1_up_down, h2_up_prob, h2_up, h1_down_prob, h1_down, h2_down_prob, h2_down, v1_down_prob, v1_down, h1_down_up_prob, h1_down_up
     
@@ -50,11 +50,11 @@ class DBNWithFineTuning():
         
         
         for step in range(0, self.cd_k):
-            h1_down_prob =
-            h1_down = 
+            h1_down_prob = sigmoid(torch.matmul(h2_down, self.W2) + self.h1_down_bias)
+            h1_down = torch.bernoulli(h1_down_prob)
 
-            h2_down_prob = 
-            h2_down = 
+            h2_down_prob = sigmoid(torch.matmul(h1_down, self.W2.T) + self.h2_bias)
+            h2_down = torch.bernoulli(h2_down_prob)
             
         return h1_down_prob, h1_down, h2_down_prob, h2_down
 

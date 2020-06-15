@@ -85,27 +85,28 @@ class RBM():
         self.v_bias = torch.Tensor(torch.zeros(self.v_size))
         self.h_bias = torch.Tensor(torch.zeros(self.h_size))
 
+
+    def __call__(self, batch):
+        return self.forward(batch)
+
     
     def forward(self, batch):
         return self._cd_pass(batch)
     
     
-    def __call__(self, batch):
-        return self.forward(batch)
-    
-    
     def _cd_pass(self, batch):
         batch = batch.view(-1, 784)
-        h0_prob = 
-        h0 = 
+        v0 = torch.bernoulli(batch)
+        h0_prob = sigmoid(v0 @ self.W + self.h_bias)
+        h0 = torch.bernoulli(h0_prob)
 
         h1 = h0
 
         for step in range(0, self.cd_k):
-            v1_prob = 
-            v1 = 
-            h1_prob = 
-            h1 = 
+            v1_prob = sigmoid(h1 @ self.W.T + self.v_bias)
+            v1 = torch.bernoulli(v1_prob)
+            h1_prob = sigmoid(v1 @ self.W + self.h_bias)
+            h1 = torch.bernoulli(h1_prob)
             
         return h0_prob, h0, h1_prob, h1, v1_prob, v1
     
@@ -117,25 +118,26 @@ class RBM():
             steps_to_do = gibbs_steps
 
         for step in range(0, steps_to_do):
-            v1_prob = 
-            v1 = 
-            h1_prob = 
-            h1 = 
+            v1_prob = sigmoid(h1 @ self.W.T + self.v_bias)
+            v1 = torch.bernoulli(v1_prob)
+            h1_prob = sigmoid(v1 @ self.W + self.h_bias)
+            h1 = torch.bernoulli(h1_prob)
 
         return h1_prob, h1, v1_prob, v1
 
     
     def update_weights_for_batch(self, batch, learning_rate=0.01):
         h0_prob, h0, h1_prob, h1, v1_prob, v1 = self._cd_pass(batch)
+        v0 = torch.bernoulli(batch)
 
-        w_positive_grad = 
-        w_negative_grad = 
+        w_positive_grad = torch.matmul(v0.T, h0)
+        w_negative_grad = torch.matmul(v1.T, h1)
 
         dw = (w_positive_grad - w_negative_grad) / batch.shape[0]
 
-        self.W = self.W + 
-        self.v_bias = self.v_bias + 
-        self.h_bias = self.h_bias + 
+        self.W = self.W + learning_rate * dw
+        self.v_bias = self.v_bias + learning_rate*torch.mean(v0-v1, dim=0)
+        self.h_bias = self.h_bias + learning_rate*torch.mean(h0-h1, dim=0)
 
 
 model = RBM(visible_size=VISIBLE_SIZE, hidden_size=HIDDEN_SIZE, cd_k=1)
